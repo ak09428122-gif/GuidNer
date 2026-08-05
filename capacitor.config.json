@@ -1,0 +1,8 @@
+{
+  "appId": "com.guidener.app",
+  "appName": "GuideNer",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
