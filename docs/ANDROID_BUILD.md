@@ -7,7 +7,7 @@ This repository is configured with **Capacitor** and **GitHub Actions** for auto
 Every time code is pushed to the `main` or `master` branch (or via a Pull Request / manual trigger):
 
 1. **GitHub Actions Workflow Triggered**: `.github/workflows/android-build.yml` starts automatically.
-2. **Environment Setup**: Installs Node.js 20, Java JDK 17, and dependencies.
+2. **Environment Setup**: Installs Node.js 22, Java JDK 17, and dependencies.
 3. **Web Build & Sync**: Runs `npm run build` and `npx cap sync android` to sync web assets into the Android native project.
 4. **Gradle Compilation**:
    - Compiles **Debug APK** (`app-debug.apk`)
