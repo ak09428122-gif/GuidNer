@@ -1,0 +1,31 @@
+# Auto-generated .gitattributes to ensure git handles binaries and line endings correctly
+
+# Explicitly set binary files to prevent line-ending corruption (CRLF/LF)
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.aar binary
+*.apk binary
+*.aab binary
+
+# Ensure shell scripts always use LF line endings
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Default text files
+*.java text
+*.gradle text
+*.properties text
+*.xml text
+*.json text
+*.yml text
+*.yaml text
+*.md text
+*.ts text
+*.tsx text
+*.css text
+*.html text
