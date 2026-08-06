@@ -514,15 +514,124 @@ class DatabaseEngine {
     ];
     for (const n of seedNotifications) await this.putOne('smart_notifications', n);
 
-    // Seed Utility Note
-    const seedUtilNote: UtilityNote = {
-      id: 'un-1',
-      title: 'Weekly Groceries & Study Station Supplies',
-      content: '- 2 Highlighters (Yellow & Cyan)\n- Spiral A4 Notebook (200 pages)\n- Almonds & Walnuts\n- Herbal Tea Bags',
-      pinned: true,
-      updated_at: now,
-    };
-    await this.putOne('utility_notes', seedUtilNote);
+    // Seed Utility Notes
+    const seedUtilNotes: UtilityNote[] = [
+      {
+        id: 'un-1',
+        title: 'Weekly Groceries & Study Station Supplies',
+        content: '- 2 Highlighters (Yellow & Cyan)\n- Spiral A4 Notebook (200 pages)\n- Almonds & Walnuts\n- Herbal Tea Bags',
+        pinned: true,
+        updated_at: now,
+      },
+      {
+        id: 'un-2',
+        title: 'National Olympiad Exam Key Dates 2026-27',
+        content: '1. Registration Deadline: 15 October 2026\n2. Mock Exam Test 1: 10 November 2026\n3. Final Stage Exam: 12 January 2027\n4. Results & Certificate Download: 28 February 2027',
+        pinned: true,
+        updated_at: now,
+      },
+      {
+        id: 'un-3',
+        title: 'Emergency Helplines & Health Support Contacts',
+        content: '🚑 National Ambulance: 102 / 108\n☎️ Student Wellness Helpline: 1800-120-4567\n🏥 Family Doctor Clinic: +91 98765 43210',
+        pinned: false,
+        updated_at: now,
+      },
+    ];
+    for (const note of seedUtilNotes) await this.putOne('utility_notes', note);
+
+    // Seed Download Tasks
+    const seedDownloads: DownloadTask[] = [
+      {
+        id: 'dl-1',
+        source_url: 'https://cdn.guidener.org/docs/Olympiad_Physics_Master_Question_Bank_2026.pdf',
+        file_name: 'Olympiad_Physics_Master_Question_Bank_2026.pdf',
+        file_category: 'document',
+        file_size: 14200000,
+        downloaded_size: 14200000,
+        status: 'completed',
+        local_path: '/downloads/Olympiad_Physics_Master_Question_Bank_2026.pdf',
+        created_at: now,
+      },
+      {
+        id: 'dl-2',
+        source_url: 'https://cdn.guidener.org/media/Guided_Mindful_Breathing_15min.mp3',
+        file_name: 'Guided_Mindful_Breathing_15min.mp3',
+        file_category: 'media',
+        file_size: 8500000,
+        downloaded_size: 8500000,
+        status: 'completed',
+        local_path: '/downloads/Guided_Mindful_Breathing_15min.mp3',
+        created_at: now,
+      },
+      {
+        id: 'dl-3',
+        source_url: 'https://cdn.guidener.org/software/GuideNer_Desktop_Companion_v2.4.tar.gz',
+        file_name: 'GuideNer_Desktop_Companion_v2.4.tar.gz',
+        file_category: 'archive',
+        file_size: 45000000,
+        downloaded_size: 28400000,
+        status: 'downloading',
+        local_path: '/downloads/GuideNer_Desktop_Companion_v2.4.tar.gz',
+        created_at: now,
+      },
+    ];
+    for (const dl of seedDownloads) await this.putOne('download_tasks', dl);
+
+    // Seed Vault Items
+    const seedVault: VaultItem[] = [
+      {
+        id: 'v-1',
+        title: 'National Olympiad Student Portal',
+        category: 'password',
+        encrypted_payload: JSON.stringify({ password: '• • • • • • • •', notes: 'Registration No: OLY-2026-8842' }),
+        iv: 'mock_iv_1',
+        username_or_key: 'arun.olympiad2026',
+        updated_at: now,
+      },
+      {
+        id: 'v-2',
+        title: 'Aadhaar & Identity Verification Card',
+        category: 'identity',
+        encrypted_payload: JSON.stringify({ document_number: 'XXXX-XXXX-9842', holder: 'Arun Gupta' }),
+        iv: 'mock_iv_2',
+        username_or_key: 'Aadhaar Card',
+        updated_at: now,
+      },
+      {
+        id: 'v-3',
+        title: 'Secure Educational Vault Backup Key',
+        category: 'private_note',
+        encrypted_payload: JSON.stringify({ note: 'Recovery phrase: alpha-bravo-charlie-delta-echo-foxtrot-2026' }),
+        iv: 'mock_iv_3',
+        username_or_key: 'Master Seed Key',
+        updated_at: now,
+      },
+    ];
+    for (const v of seedVault) await this.putOne('vault_items', v);
+
+    // Seed Clipboard Items
+    const seedClipboard: ClipboardItem[] = [
+      {
+        id: 'clip-1',
+        content: 'https://olympiad.guidener.org/register-student-2027',
+        copied_at: now,
+        is_sensitive: false,
+      },
+      {
+        id: 'clip-2',
+        content: 'Formula: F = (1 / 4πε₀) * (q₁q₂ / r²)',
+        copied_at: now,
+        is_sensitive: false,
+      },
+      {
+        id: 'clip-3',
+        content: 'WiFi Security Key: GuideNer-SuperFast-5G',
+        copied_at: now,
+        is_sensitive: true,
+      },
+    ];
+    for (const clip of seedClipboard) await this.putOne('clipboard_history', clip);
   }
 
   // --- Public API Methods ---
