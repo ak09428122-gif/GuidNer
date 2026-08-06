@@ -212,3 +212,86 @@ export interface ClipboardItem {
   copied_at: string;
   is_sensitive: boolean;
 }
+
+export type OmniAirEngine = 'omni_beam' | 'omni_direct' | 'omni_bluetooth';
+export type AttachmentType =
+  | 'document'
+  | 'gallery'
+  | 'camera'
+  | 'audio'
+  | 'contact'
+  | 'password'
+  | 'emergency_card'
+  | 'timetable'
+  | 'bill_split'
+  | 'location';
+
+export interface OmniAirMessage {
+  id: string;
+  sessionId: string;
+  senderId: string;
+  senderName: string;
+  isMe: boolean;
+  content: string;
+  attachmentType?: AttachmentType;
+  attachmentData?: any;
+  engineUsed: OmniAirEngine;
+  status: 'sent' | 'delivered' | 'read';
+  timestamp: string;
+  autoDeleteSeconds?: number;
+  encrypted?: boolean;
+  isStarred?: boolean;
+  isPinned?: boolean;
+  reactions?: string[];
+}
+
+export interface OmniAirChatSession {
+  id: string;
+  name: string;
+  avatar: string;
+  lastMessage: string;
+  unreadCount: number;
+  onlineStatus: 'online' | 'offline' | 'transferring';
+  defaultEngine: OmniAirEngine;
+  updatedAt: string;
+  isBroadcast?: boolean;
+  isGroup?: boolean;
+}
+
+export interface BrowserBookmark {
+  id: string;
+  title: string;
+  url: string;
+  icon?: string;
+  createdAt: string;
+}
+
+export interface BrowserHistoryItem {
+  id: string;
+  title: string;
+  url: string;
+  visitedAt: string;
+}
+
+export type ActivityCategory =
+  | 'new_feature'
+  | 'download'
+  | 'transfer'
+  | 'ai_action'
+  | 'browser_download'
+  | 'study_update'
+  | 'health_update'
+  | 'system_message';
+
+export interface ActivityItem {
+  id: string;
+  title: string;
+  description?: string;
+  category: ActivityCategory;
+  timestamp: string;
+  status: 'completed' | 'new' | 'synced' | 'active' | 'delivered';
+  targetTab?: string;
+  isRead: boolean;
+  isPinned: boolean;
+}
+

@@ -23,10 +23,15 @@ import {
   Shield,
   UserCheck,
   Check,
+  Radio,
+  Globe,
+  Maximize2,
 } from 'lucide-react';
 import { GuideNerLogo } from '../../core/theme/Logo';
 import { ThemeMode, AIPersonaMode, AI_PERSONA_CONFIGS } from '../../core/theme/tokens';
 import { useProfile, ProfileType } from '../../core/profile/ProfileContext';
+import { useFirebaseAuth } from '../../core/database/FirebaseAuthContext';
+import { desktopManager } from '../../core/DesktopManager';
 
 export type ActiveTab =
   | 'home'
@@ -34,9 +39,11 @@ export type ActiveTab =
   | 'life_os'
   | 'study'
   | 'health_spiritual'
-  | 'utilities'
-  | 'downloader'
   | 'vault'
+  | 'omniair'
+  | 'browser'
+  | 'downloader'
+  | 'utilities'
   | 'registration'
   | 'admin';
 
@@ -68,18 +75,21 @@ export const Navigation: React.FC<NavigationProps> = ({
   onOpenGuidedSettings,
 }) => {
   const { currentProfile, activeProfileId, switchProfile, allProfiles } = useProfile();
+  const { user: fbUser, signInWithGoogle, signOut: fbSignOut, firestoreStatus } = useFirebaseAuth();
   const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false);
 
-  const navItems: { id: ActiveTab; label: string; shortLabel: string; icon: React.FC<{ className?: string }>; badge?: string; category: string }[] = [
-    { id: 'home', label: 'Home', shortLabel: 'Home', icon: Home, category: 'Core' },
-    { id: 'life_os', label: 'Life OS Routine', shortLabel: 'Routine', icon: CalendarCheck, category: 'Core' },
-    { id: 'ai', label: 'AI Companion', shortLabel: 'AI Chat', icon: Bot, badge: 'Live', category: 'Core' },
-    { id: 'study', label: 'Study Hub', shortLabel: 'Study', icon: GraduationCap, category: 'Core' },
-    { id: 'health_spiritual', label: 'Health & Spiritual', shortLabel: 'Health', icon: HeartPulse, category: 'Wellness' },
-    { id: 'vault', label: 'Secure Vault', shortLabel: 'Vault', icon: Lock, badge: 'AES', category: 'Security' },
-    { id: 'downloader', label: 'Transfer & Downloads', shortLabel: 'Transfer', icon: Download, category: 'Utilities' },
+  const navItems: { id: ActiveTab; label: string; shortLabel: string; icon: React.FC<{ className?: string }>; badge?: string; category: string; shortcut?: string }[] = [
+    { id: 'home', label: 'Home', shortLabel: 'Home', icon: Home, category: 'Core', shortcut: '⌘1' },
+    { id: 'ai', label: 'AI Companion', shortLabel: 'AI Chat', icon: Bot, badge: 'Live', category: 'Core', shortcut: '⌘2' },
+    { id: 'study', label: 'Study Hub', shortLabel: 'Study', icon: GraduationCap, category: 'Core', shortcut: '⌘3' },
+    { id: 'health_spiritual', label: 'Health & Spiritual', shortLabel: 'Health', icon: HeartPulse, category: 'Wellness', shortcut: '⌘4' },
+    { id: 'vault', label: 'Secure Vault', shortLabel: 'Vault', icon: Lock, badge: 'AES', category: 'Security', shortcut: '⌘5' },
+    { id: 'omniair', label: 'OmniAir Transfer', shortLabel: 'OmniAir', icon: Radio, badge: 'P2P', category: 'Transfer', shortcut: '⌘6' },
+    { id: 'browser', label: 'Omni Browser', shortLabel: 'Browser', icon: Globe, badge: 'Web', category: 'Browser', shortcut: '⌘7' },
+    { id: 'life_os', label: 'Life OS Routine', shortLabel: 'Routine', icon: CalendarCheck, category: 'Core', shortcut: '⌘8' },
+    { id: 'downloader', label: 'Download Manager', shortLabel: 'Downloads', icon: Download, category: 'Utilities', shortcut: '⌘9' },
     { id: 'utilities', label: 'Utilities & Notes', shortLabel: 'Utilities', icon: Wrench, category: 'Utilities' },
     { id: 'registration', label: 'Knowledge Library', shortLabel: 'Library', icon: BookOpen, badge: 'Hub', category: 'Learning' },
     { id: 'admin', label: 'Analytics & Admin', shortLabel: 'Analytics', icon: BarChart3, category: 'Tools' },
@@ -117,6 +127,30 @@ export const Navigation: React.FC<NavigationProps> = ({
               ⌘K
             </kbd>
           </button>
+
+          {/* Firebase Cloud Sync / Google Sign-In Button */}
+          {fbUser ? (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+              <span className="hidden md:inline truncate max-w-[100px]">{fbUser.displayName || 'Synced'}</span>
+              <button
+                onClick={() => fbSignOut()}
+                className="ml-1 text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline"
+                title="Sign out of Firebase"
+              >
+                Exit
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => signInWithGoogle().catch(() => {})}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-2xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all"
+              title="Sync profile and Life OS to Firebase Firestore"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Firebase Sync</span>
+            </button>
+          )}
 
           {/* One-Tap Profile Switcher Dropdown */}
           <div className="relative">
@@ -235,6 +269,15 @@ export const Navigation: React.FC<NavigationProps> = ({
             {theme === 'oled' && <Zap className="w-4 h-4 text-purple-400" />}
           </button>
 
+          {/* Desktop Fullscreen Button */}
+          <button
+            onClick={() => desktopManager.toggleFullscreen()}
+            className="hidden lg:flex p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all"
+            title="Toggle Native Browser Fullscreen (F11)"
+          >
+            <Maximize2 className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+          </button>
+
           {/* AI Guided Mode Trigger */}
           {onOpenGuidedSettings && (
             <button
@@ -247,15 +290,18 @@ export const Navigation: React.FC<NavigationProps> = ({
             </button>
           )}
 
-          {/* Notification Center Trigger */}
+          {/* Notification & Activity Center Trigger */}
           <button
             onClick={onOpenNotifs}
-            className="relative p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all"
-            title="Notifications & Smart Alarms"
+            className="relative p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1"
+            title="Activity Center & Smart Updates"
           >
-            <Bell className="w-4 h-4" />
+            <Bell className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             {unreadNotifsCount > 0 && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-900" />
+              <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full border border-emerald-500/30">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="hidden sm:inline">🟢 {unreadNotifsCount}</span>
+              </span>
             )}
           </button>
         </div>
@@ -287,15 +333,26 @@ export const Navigation: React.FC<NavigationProps> = ({
                   <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
                   <span>{item.label}</span>
                 </div>
-                {item.badge && (
-                  <span
-                    className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5">
+                  {item.badge && (
+                    <span
+                      className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                  {item.shortcut && !item.badge && (
+                    <span
+                      className={`hidden group-hover:inline-block text-[10px] font-mono opacity-60 ${
+                        isActive ? 'text-white' : 'text-slate-400'
+                      }`}
+                    >
+                      {item.shortcut}
+                    </span>
+                  )}
+                </div>
               </button>
             );
           })}

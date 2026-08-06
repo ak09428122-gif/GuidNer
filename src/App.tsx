@@ -16,7 +16,9 @@ import {
   RegistrationForm,
   SmartNotification,
   AIMemory,
+  ActivityItem,
 } from './core/database/schema';
+import { ActivityCenterModal } from './features/activity/ActivityCenterModal';
 import { ThemeMode, AIPersonaMode } from './core/theme/tokens';
 import { Navigation, ActiveTab } from './shared/components/Navigation';
 import { HomeView } from './features/home/HomeView';
@@ -27,21 +29,28 @@ import { HealthSpiritualView } from './features/health_spiritual/HealthSpiritual
 import { UtilitiesView } from './features/utilities/UtilitiesView';
 import { DownloaderView } from './features/downloader/DownloaderView';
 import { VaultView } from './features/vault/VaultView';
+import { OmniAirView } from './features/omniair/OmniAirView';
+import { OmniBrowserView } from './features/browser/OmniBrowserView';
 import { KnowledgeLibraryView } from './features/knowledge_library/KnowledgeLibraryView';
 import { AdminView } from './features/admin/AdminView';
 import { SearchModal } from './shared/components/SearchModal';
 import { NotificationModal } from './shared/components/NotificationModal';
 import { GuidedModeProvider } from './core/guided/GuidedModeContext';
 import { ProfileProvider } from './core/profile/ProfileContext';
+import { FirebaseAuthProvider } from './core/database/FirebaseAuthContext';
 import { GuidedScreenBanner } from './shared/components/GuidedScreenBanner';
 import { GuidedTourOverlay } from './shared/components/GuidedTourOverlay';
 import { GuidedFeatureModal } from './shared/components/GuidedFeatureModal';
 import { GuidedModeSettingsModal } from './shared/components/GuidedModeSettingsModal';
+import { FloatingAIAssistant } from './shared/components/FloatingAIAssistant';
+import { DesktopContextMenu } from './shared/components/DesktopContextMenu';
+import { DesktopShortcutsHelpModal } from './shared/components/DesktopShortcutsHelpModal';
 
 export function AppContent() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
   const [theme, setTheme] = useState<ThemeMode>('light');
   const [persona, setPersona] = useState<AIPersonaMode>('friendly');
+  const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
 
   // Database Data States
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -60,9 +69,90 @@ export function AppContent() {
   const [notifications, setNotifications] = useState<SmartNotification[]>([]);
   const [aiMemories, setAiMemories] = useState<AIMemory[]>([]);
 
+  // Smart Updates & Activity Center State
+  const [activities, setActivities] = useState<ActivityItem[]>(() => {
+    const saved = localStorage.getItem('gn_activity_center_items');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    return [
+      {
+        id: 'act-1',
+        title: 'OmniAir High-Speed P2P Beam Transfer Released',
+        description: 'Direct offline P2P beam transfer for files, documents, contacts, emergency cards, and notes.',
+        category: 'new_feature',
+        timestamp: new Date().toISOString(),
+        status: 'new',
+        targetTab: 'omniair',
+        isRead: false,
+        isPinned: true,
+      },
+      {
+        id: 'act-2',
+        title: 'OmniBrowser Private Multi-Tab Engine Active',
+        description: 'Explore web resources with private Reader Mode and instant download management.',
+        category: 'new_feature',
+        timestamp: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+        status: 'new',
+        targetTab: 'browser',
+        isRead: false,
+        isPinned: false,
+      },
+      {
+        id: 'act-3',
+        title: 'Firebase Firestore Auto-Sync Completed',
+        description: 'Local database records successfully backed up to Firebase cloud database.',
+        category: 'system_message',
+        timestamp: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
+        status: 'synced',
+        targetTab: 'admin',
+        isRead: false,
+        isPinned: false,
+      },
+      {
+        id: 'act-4',
+        title: 'Study Document AI Flashcards Ready',
+        description: 'AI generated flashcard deck and study summary for Quantum Physics module.',
+        category: 'study_update',
+        timestamp: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+        status: 'completed',
+        targetTab: 'study',
+        isRead: false,
+        isPinned: false,
+      },
+      {
+        id: 'act-5',
+        title: 'AI Companion Persona Memory Updated',
+        description: 'AIPersona updated preferences and routine memory logs for faster response times.',
+        category: 'ai_action',
+        timestamp: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+        status: 'active',
+        targetTab: 'ai',
+        isRead: true,
+        isPinned: false,
+      },
+      {
+        id: 'act-6',
+        title: 'GuideNer Syllabus 2026 PDF Saved',
+        description: '4.5 MB file safely saved to local Download Manager and Encrypted Vault.',
+        category: 'download',
+        timestamp: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+        status: 'completed',
+        targetTab: 'downloader',
+        isRead: true,
+        isPinned: false,
+      },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gn_activity_center_items', JSON.stringify(activities));
+  }, [activities]);
+
   // Modals
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotifsOpen, setIsNotifsOpen] = useState(false);
+  const [isActivityCenterOpen, setIsActivityCenterOpen] = useState(false);
   const [isGuidedSettingsOpen, setIsGuidedSettingsOpen] = useState(false);
 
   // Load IndexedDB Data on Mount
@@ -104,12 +194,39 @@ export function AppContent() {
     }
   }, [theme]);
 
-  // Global Keyboard Shortcuts (e.g. Cmd+K / Ctrl+K for Search)
+  // Global Desktop Keyboard Shortcuts (e.g. Cmd+K for Search, Cmd+1..9 for Tabs, ? for Help)
   useEffect(() => {
+    const tabMap: Record<string, ActiveTab> = {
+      '1': 'home',
+      '2': 'ai',
+      '3': 'study',
+      '4': 'health_spiritual',
+      '5': 'vault',
+      '6': 'omniair',
+      '7': 'browser',
+      '8': 'life_os',
+      '9': 'downloader',
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      // Don't trigger shortcuts if typing inside input/textarea
+      const targetTag = (e.target as HTMLElement)?.tagName;
+      if (targetTag === 'INPUT' || targetTag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsSearchOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setActiveTab('utilities');
+      } else if ((e.metaKey || e.ctrlKey) && tabMap[e.key]) {
+        e.preventDefault();
+        setActiveTab(tabMap[e.key]);
+      } else if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setIsShortcutsHelpOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -202,6 +319,20 @@ export function AppContent() {
     }
     setDocuments(updated);
     db.saveStudyDocuments(updated);
+
+    // Trigger Activity Notification
+    const newAct: ActivityItem = {
+      id: `act-${Date.now()}`,
+      title: `Study Doc: ${doc.title}`,
+      description: `New study note added with tag #${doc.tags[0] || 'study'}.`,
+      category: 'study_update',
+      timestamp: new Date().toISOString(),
+      status: 'completed',
+      targetTab: 'study',
+      isRead: false,
+      isPinned: false,
+    };
+    setActivities((prev) => [newAct, ...prev]);
   };
 
   const handleSaveUtilityNote = (note: UtilityNote) => {
@@ -225,6 +356,20 @@ export function AppContent() {
     const updated = [task, ...downloadTasks];
     setDownloadTasks(updated);
     db.saveDownloadTasks(updated);
+
+    // Trigger Activity Notification
+    const newAct: ActivityItem = {
+      id: `act-${Date.now()}`,
+      title: `Download Completed: ${task.file_name}`,
+      description: `Resource downloaded from ${task.source_url.slice(0, 30)}...`,
+      category: 'download',
+      timestamp: new Date().toISOString(),
+      status: 'completed',
+      targetTab: 'downloader',
+      isRead: false,
+      isPinned: false,
+    };
+    setActivities((prev) => [newAct, ...prev]);
   };
 
   const handleDeleteDownloadTask = (id: string) => {
@@ -237,6 +382,20 @@ export function AppContent() {
     const updated = [item, ...vaultItems];
     setVaultItems(updated);
     db.saveVaultItems(updated);
+
+    // Trigger Activity Notification
+    const newAct: ActivityItem = {
+      id: `act-${Date.now()}`,
+      title: `Vault Encrypted: ${item.title}`,
+      description: `AES-256 payload stored for category '${item.category}'.`,
+      category: 'system_message',
+      timestamp: new Date().toISOString(),
+      status: 'synced',
+      targetTab: 'vault',
+      isRead: false,
+      isPinned: false,
+    };
+    setActivities((prev) => [newAct, ...prev]);
   };
 
   const handleDeleteVaultItem = (id: string) => {
@@ -299,7 +458,7 @@ export function AppContent() {
     );
   }
 
-  const unreadNotifs = notifications.filter((n) => !n.read).length;
+  const unreadActivitiesCount = activities.filter((a) => !a.isRead).length;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors antialiased">
@@ -313,13 +472,13 @@ export function AppContent() {
         setPersona={setPersona}
         lifeScore={user.life_score}
         onOpenSearch={() => setIsSearchOpen(true)}
-        unreadNotifsCount={unreadNotifs}
-        onOpenNotifs={() => setIsNotifsOpen(true)}
+        unreadNotifsCount={unreadActivitiesCount}
+        onOpenNotifs={() => setIsActivityCenterOpen(true)}
         onOpenGuidedSettings={() => setIsGuidedSettingsOpen(true)}
       />
 
       {/* Main Workspace Layout */}
-      <main className="lg:pl-64 p-4 sm:p-6 pb-20 lg:pb-6 max-w-7xl mx-auto min-h-[calc(100vh-60px)]">
+      <main className="lg:pl-64 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8 w-full max-w-full min-h-[calc(100vh-60px)]">
         {activeTab === 'home' && (
           <HomeView
             user={{ ...user, persona_mode: persona }}
@@ -331,6 +490,9 @@ export function AppContent() {
             onToggleHabit={handleToggleHabit}
             onAddWater={handleAddWater}
             onNavigate={setActiveTab}
+            unreadActivityCount={unreadActivitiesCount}
+            onOpenActivityCenter={() => setIsActivityCenterOpen(true)}
+            latestActivityTitle={activities[0]?.title}
           />
         )}
 
@@ -413,6 +575,32 @@ export function AppContent() {
           />
         )}
 
+        {activeTab === 'omniair' && (
+          <OmniAirView
+            onSaveVaultItem={handleSaveVaultItem}
+            onAddDownloadTask={handleSaveDownloadTask}
+          />
+        )}
+
+        {activeTab === 'browser' && (
+          <OmniBrowserView
+            onSaveToDownloads={handleSaveDownloadTask}
+            onSaveToVault={(title, url) => {
+              handleSaveVaultItem({
+                id: `vault-${Date.now()}`,
+                title,
+                category: 'document',
+                encrypted_payload: url,
+                iv: 'browser-iv',
+                updated_at: new Date().toISOString(),
+              });
+            }}
+            onShareToOmniAir={(url) => {
+              setActiveTab('omniair');
+            }}
+          />
+        )}
+
         {activeTab === 'registration' && (
           <KnowledgeLibraryView
             onNavigateAI={(prompt) => {
@@ -448,19 +636,32 @@ export function AppContent() {
         onSelectTab={setActiveTab}
       />
 
-      {/* Global Notifications Modal */}
-      <NotificationModal
-        isOpen={isNotifsOpen}
-        onClose={() => setIsNotifsOpen(false)}
-        notifications={notifications}
+      {/* Activity Center & Smart Updates Modal */}
+      <ActivityCenterModal
+        isOpen={isActivityCenterOpen}
+        onClose={() => setIsActivityCenterOpen(false)}
+        activities={activities}
         onMarkAsRead={(id) => {
-          const updated = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
-          setNotifications(updated);
-          db.saveNotifications(updated);
+          setActivities((prev) =>
+            prev.map((a) => (a.id === id ? { ...a, isRead: true } : a))
+          );
+        }}
+        onMarkAllAsRead={() => {
+          setActivities((prev) => prev.map((a) => ({ ...a, isRead: true })));
+        }}
+        onClearItem={(id) => {
+          setActivities((prev) => prev.filter((a) => a.id !== id));
         }}
         onClearAll={() => {
-          setNotifications([]);
-          db.saveNotifications([]);
+          setActivities((prev) => prev.filter((a) => a.isPinned));
+        }}
+        onTogglePin={(id) => {
+          setActivities((prev) =>
+            prev.map((a) => (a.id === id ? { ...a, isPinned: !a.isPinned } : a))
+          );
+        }}
+        onNavigateTab={(tab) => {
+          setActiveTab(tab as ActiveTab);
         }}
       />
 
@@ -472,17 +673,35 @@ export function AppContent() {
         isOpen={isGuidedSettingsOpen}
         onClose={() => setIsGuidedSettingsOpen(false)}
       />
+
+      {/* Floating AI Assistant & Voice Quick Actions */}
+      <FloatingAIAssistant onNavigateTab={(tab) => setActiveTab(tab as ActiveTab)} />
+
+      {/* Desktop Native OS Right-Click Context Menu */}
+      <DesktopContextMenu
+        onNavigate={(tab) => setActiveTab(tab as ActiveTab)}
+        onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenShortcutsModal={() => setIsShortcutsHelpOpen(true)}
+      />
+
+      {/* Desktop Hotkeys Overlay Modal */}
+      <DesktopShortcutsHelpModal
+        isOpen={isShortcutsHelpOpen}
+        onClose={() => setIsShortcutsHelpOpen(false)}
+      />
     </div>
   );
 }
 
 export function App() {
   return (
-    <ProfileProvider>
-      <GuidedModeProvider>
-        <AppContent />
-      </GuidedModeProvider>
-    </ProfileProvider>
+    <FirebaseAuthProvider>
+      <ProfileProvider>
+        <GuidedModeProvider>
+          <AppContent />
+        </GuidedModeProvider>
+      </ProfileProvider>
+    </FirebaseAuthProvider>
   );
 }
 

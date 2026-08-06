@@ -40,6 +40,9 @@ interface HomeViewProps {
   onToggleHabit: (id: string) => void;
   onAddWater: (amountMl: number) => void;
   onNavigate: (tab: any) => void;
+  unreadActivityCount?: number;
+  onOpenActivityCenter?: () => void;
+  latestActivityTitle?: string;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -52,6 +55,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onToggleHabit,
   onAddWater,
   onNavigate,
+  unreadActivityCount = 0,
+  onOpenActivityCenter,
+  latestActivityTitle,
 }) => {
   const { currentProfile } = useProfile();
   const { checkAndTriggerScreenGuide, explainFeature } = useGuidedMode();
@@ -96,7 +102,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   );
 
   return (
-    <div className={`space-y-6 pb-20 lg:pb-8 ${density === 'compact' ? 'scale-95 origin-top' : ''}`}>
+    <div className={`w-full space-y-6 pb-20 lg:pb-8 ${density === 'compact' ? 'scale-95 origin-top' : ''}`}>
       {/* Top Hero Greeting Header Card (Inspired by uploaded Reference Image) */}
       <section
         id="daily_briefing_card"
@@ -184,6 +190,46 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
         </div>
       </section>
+
+      {/* What's New & Activity Center Banner Card */}
+      <button
+        onClick={onOpenActivityCenter}
+        className="w-full p-4 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 border border-emerald-500/30 hover:border-emerald-500 transition-all flex items-center justify-between gap-3 shadow-sm hover:shadow-md text-left group"
+      >
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="relative p-3 rounded-2xl bg-emerald-500 text-white font-bold shrink-0 shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+            <Zap className="w-5 h-5" />
+            {unreadActivityCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-white dark:border-slate-900 animate-pulse" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
+                What's New & Activity Center
+              </span>
+              {unreadActivityCount > 0 ? (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center gap-1 shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                  🟢 {unreadActivityCount} NEW
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold">
+                  All Read
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 truncate">
+              {latestActivityTitle || 'OmniAir P2P Transfer & OmniBrowser multi-tab engine active'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+          <span className="hidden sm:inline">Open Center</span>
+          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        </div>
+      </button>
 
       {/* Quick Access Dock (6 Primary Cards) */}
       <section className="space-y-3">
