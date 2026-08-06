@@ -1,7 +1,8 @@
 # Auto-generated .gitattributes to ensure git handles binaries and line endings correctly
 
 # Explicitly set binary files to prevent line-ending corruption (CRLF/LF)
-*.jar binary
+android/gradle/wrapper/gradle-wrapper.jar binary -text
+*.jar binary -text
 *.png binary
 *.jpg binary
 *.jpeg binary

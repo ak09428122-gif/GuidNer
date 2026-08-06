@@ -41,8 +41,18 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Grant Execute Permission for Gradle Wrapper
         run: chmod +x android/gradlew
+
+      - name: Verify Gradle Wrapper Binary
+        run: |
+          cd android
+          ls -la gradle/wrapper/gradle-wrapper.jar
+          sha256sum gradle/wrapper/gradle-wrapper.jar
+          java -jar gradle/wrapper/gradle-wrapper.jar --version
 
       - name: Build Debug APK
         run: |
