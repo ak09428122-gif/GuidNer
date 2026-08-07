@@ -15,7 +15,7 @@ export interface UserProfileConfig {
 export const PROFILES_CONFIG: Record<ProfileType, UserProfileConfig> = {
   personal: {
     id: 'personal',
-    name: 'Arun Gupta',
+    name: 'Primary Profile',
     roleLabel: 'Personal Life OS',
     avatarIcon: '👤',
     badgeColor: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
@@ -24,7 +24,7 @@ export const PROFILES_CONFIG: Record<ProfileType, UserProfileConfig> = {
   },
   family: {
     id: 'family',
-    name: 'Gupta Family Hub',
+    name: 'Family Hub',
     roleLabel: 'Shared Household',
     avatarIcon: '🏡',
     badgeColor: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
@@ -33,7 +33,7 @@ export const PROFILES_CONFIG: Record<ProfileType, UserProfileConfig> = {
   },
   child: {
     id: 'child',
-    name: 'Rohan Gupta',
+    name: 'Student Space',
     roleLabel: 'Grade 6 Student',
     avatarIcon: '🎒',
     badgeColor: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
@@ -42,7 +42,7 @@ export const PROFILES_CONFIG: Record<ProfileType, UserProfileConfig> = {
   },
   parent: {
     id: 'parent',
-    name: 'Rajesh Gupta',
+    name: 'Executive & Guardian',
     roleLabel: 'Parent & Executive',
     avatarIcon: '👔',
     badgeColor: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',

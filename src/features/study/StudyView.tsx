@@ -12,11 +12,21 @@ import {
   Zap,
   Tag,
   Search,
+  Clock,
+  Play,
+  Pause,
+  RotateCcw,
+  Target,
+  BarChart3,
+  CheckCircle2,
+  ListTodo,
 } from 'lucide-react';
 import { StudyDocument, FlashcardDeck, Flashcard } from '../../core/database/schema';
 import { aiEngine } from '../../core/ai/AIEngineService';
+import { notificationEngine } from '../../core/notifications/NotificationService';
 import { HelpMeUseButton } from '../../shared/components/HelpMeUseButton';
 import { useGuidedMode } from '../../core/guided/GuidedModeContext';
+import { M3Card } from '../../shared/components/ui/MaterialComponents';
 
 interface StudyViewProps {
   documents: StudyDocument[];
@@ -31,43 +41,55 @@ export const StudyView: React.FC<StudyViewProps> = ({
   onSaveDocument,
   onSaveDeck,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'notes' | 'flashcards' | 'ai_tutor'>('notes');
+  const [activeSubTab, setActiveSubTab] = useState<'notes' | 'subjects' | 'pomodoro' | 'flashcards' | 'analytics'>('notes');
   const [selectedDocId, setSelectedDocId] = useState<string>(documents[0]?.id || '');
   const [searchFilter, setSearchFilter] = useState('');
   const { checkAndTriggerScreenGuide } = useGuidedMode();
+
+  // Subjects state for Module 8
+  const [subjects] = useState([
+    { id: 's1', name: 'Physics & Mechanics', progress: 82, color: 'bg-purple-600' },
+    { id: 's2', name: 'Organic Chemistry', progress: 65, color: 'bg-indigo-600' },
+    { id: 's3', name: 'Calculus & Algebra', progress: 91, color: 'bg-blue-600' },
+    { id: 's4', name: 'Computer Science', progress: 95, color: 'bg-emerald-600' },
+  ]);
+
+  // Pomodoro Focus Timer State
+  const [pomodoroTime, setPomodoroTime] = useState<number>(25 * 60);
+  const [isPomodoroRunning, setIsPomodoroRunning] = useState(false);
 
   useEffect(() => {
     checkAndTriggerScreenGuide('study');
   }, [checkAndTriggerScreenGuide]);
 
+  // Pomodoro Timer effect
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isPomodoroRunning && pomodoroTime > 0) {
+      timer = setInterval(() => setPomodoroTime((t) => t - 1), 1000);
+    } else if (pomodoroTime === 0 && isPomodoroRunning) {
+      notificationEngine.playTone('gentle_chime');
+      alert('Pomodoro session complete! Take a 5-minute break.');
+      setIsPomodoroRunning(false);
+      setPomodoroTime(25 * 60);
+    }
+    return () => clearInterval(timer);
+  }, [isPomodoroRunning, pomodoroTime]);
+
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   // Flashcard review state
-  const [currentDeck, setCurrentDeck] = useState<FlashcardDeck | null>(flashcardDecks[0] || null);
+  const [currentDeck] = useState<FlashcardDeck | null>(flashcardDecks[0] || null);
   const [cardIndex, setCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // AI Tutor prompt generator
-  const [tutorTopic, setTutorTopic] = useState('Quadratic Equations & Complex Roots');
-  const [tutorExplanation, setTutorExplanation] = useState('');
-
   const activeDoc = documents.find((d) => d.id === selectedDocId) || documents[0];
 
-  const handleGenerateAIExplanation = () => {
-    const text = aiEngine.generateConceptExplanation(tutorTopic);
-    setTutorExplanation(text);
-  };
-
   const currentCard: Flashcard | undefined = currentDeck?.cards[cardIndex];
-
-  const handleCardRating = (score: number) => {
-    if (!currentDeck || !currentCard) return;
-    setIsFlipped(false);
-    if (cardIndex < currentDeck.cards.length - 1) {
-      setCardIndex((prev) => prev + 1);
-    } else {
-      setCardIndex(0);
-      alert('Deck review complete! Excellent work retaining concepts.');
-    }
-  };
 
   const filteredDocs = documents.filter(
     (d) =>
@@ -76,79 +98,85 @@ export const StudyView: React.FC<StudyViewProps> = ({
   );
 
   return (
-    <div className="space-y-6 pb-20 lg:pb-8">
-      {/* Header & Workspace Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+    <div className="space-y-6 pb-20 lg:pb-8 font-sans text-slate-900 dark:text-white">
+      {/* Header & Sub-Tab Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-500/20">
+          <div className="p-3 rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-600/30">
             <GraduationCap className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-extrabold text-lg text-slate-900 dark:text-white">Study Hub & Olympiad Prep</h1>
+              <h1 className="font-extrabold text-lg text-slate-900 dark:text-white">
+                Pro Study Engine & Revision Hub
+              </h1>
               <HelpMeUseButton screenId="study" label="Walkthrough" />
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Smart Notes • Spaced Repetition Flashcards • AI Tutor
+              Subjects • Notes • Pomodoro Timer • Flashcards • Goal Predictions
             </p>
           </div>
         </div>
 
         {/* Sub-Tab Navigation */}
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl">
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl">
           <button
             onClick={() => setActiveSubTab('notes')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeSubTab === 'notes'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              activeSubTab === 'notes' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400'
             }`}
           >
-            <BookOpen className="w-4 h-4" />
-            <span>Notes & PDF</span>
+            Notes
           </button>
-
+          <button
+            onClick={() => setActiveSubTab('subjects')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              activeSubTab === 'subjects' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400'
+            }`}
+          >
+            Subjects
+          </button>
+          <button
+            onClick={() => setActiveSubTab('pomodoro')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              activeSubTab === 'pomodoro' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400'
+            }`}
+          >
+            Pomodoro
+          </button>
           <button
             onClick={() => setActiveSubTab('flashcards')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeSubTab === 'flashcards'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              activeSubTab === 'flashcards' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400'
             }`}
           >
-            <RotateCw className="w-4 h-4" />
-            <span>Flashcards</span>
+            Flashcards
           </button>
-
           <button
-            onClick={() => setActiveSubTab('ai_tutor')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeSubTab === 'ai_tutor'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            onClick={() => setActiveSubTab('analytics')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              activeSubTab === 'analytics' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400'
             }`}
           >
-            <BrainCircuit className="w-4 h-4" />
-            <span>AI Tutor</span>
+            Analytics
           </button>
         </div>
       </div>
 
-      {/* 1. NOTES & DOCUMENTS TAB */}
+      {/* 1. NOTES TAB */}
       {activeSubTab === 'notes' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Document Directory Sidebar */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-extrabold text-sm text-slate-900 dark:text-white">Documents ({documents.length})</h2>
+              <h2 className="font-extrabold text-sm">Notes ({documents.length})</h2>
               <button
                 onClick={() => {
                   const newDoc: StudyDocument = {
                     id: `doc-${Date.now()}`,
-                    title: 'New Physics Note',
-                    content: '# Physics Mechanics\n\n- Mass and Acceleration\n- $F = ma$',
+                    title: 'New Study Note',
+                    content: '# Chapter Note\n\n- Main Points\n- Key Definitions',
                     file_type: 'note',
-                    tags: ['Physics'],
+                    tags: ['Exam'],
                     summary: 'New note summary',
                     is_favorite: false,
                     created_at: new Date().toISOString(),
@@ -157,22 +185,10 @@ export const StudyView: React.FC<StudyViewProps> = ({
                   onSaveDocument(newDoc);
                   setSelectedDocId(newDoc.id);
                 }}
-                className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1"
+                className="px-3 py-1.5 rounded-xl bg-purple-600 text-white font-bold text-xs shadow-md"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>New Note</span>
+                + New Note
               </button>
-            </div>
-
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search notes or tags..."
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none"
-              />
             </div>
 
             <div className="space-y-2">
@@ -180,73 +196,22 @@ export const StudyView: React.FC<StudyViewProps> = ({
                 <div
                   key={doc.id}
                   onClick={() => setSelectedDocId(doc.id)}
-                  className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                  className={`p-3.5 rounded-2xl border cursor-pointer ${
                     activeDoc?.id === doc.id
-                      ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-500/50 text-purple-950 dark:text-purple-100 font-bold'
-                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-purple-300'
+                      ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-500'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs truncate">{doc.title}</span>
-                    {doc.is_favorite && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />}
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-2 overflow-x-auto">
-                    {doc.tags.map((t) => (
-                      <span
-                        key={t}
-                        className="px-2 py-0.5 text-[9px] font-semibold rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0"
-                      >
-                        #{t}
-                      </span>
-                    ))}
-                  </div>
+                  <div className="font-bold text-xs">{doc.title}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Document Content Reader / Editor Pane */}
           {activeDoc && (
-            <div className="lg:col-span-2 p-6 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4">
-                <div>
-                  <h2 className="font-extrabold text-lg text-slate-900 dark:text-white">{activeDoc.title}</h2>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    <Tag className="w-3.5 h-3.5 text-purple-500" />
-                    <span>Tags: {activeDoc.tags.join(', ')}</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() =>
-                    onSaveDocument({
-                      ...activeDoc,
-                      is_favorite: !activeDoc.is_favorite,
-                    })
-                  }
-                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-600 dark:text-slate-300"
-                >
-                  <Star
-                    className={`w-4 h-4 ${
-                      activeDoc.is_favorite ? 'text-amber-500 fill-amber-500' : 'text-slate-400'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Document Summary AI Box */}
-              {activeDoc.summary && (
-                <div className="p-3.5 rounded-2xl bg-purple-50 dark:bg-purple-950/30 border border-purple-500/20 flex items-start gap-3">
-                  <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
-                  <div className="text-xs text-purple-900 dark:text-purple-200">
-                    <strong className="font-bold">AI Summary: </strong>
-                    {activeDoc.summary}
-                  </div>
-                </div>
-              )}
-
-              {/* Document Markdown Content Box */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 font-mono text-xs sm:text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed min-h-[300px]">
+            <div className="lg:col-span-2 p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
+              <h2 className="font-extrabold text-base">{activeDoc.title}</h2>
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 font-mono text-xs whitespace-pre-wrap min-h-[250px]">
                 {activeDoc.content}
               </div>
             </div>
@@ -254,104 +219,75 @@ export const StudyView: React.FC<StudyViewProps> = ({
         </div>
       )}
 
-      {/* 2. FLASHCARDS TAB */}
-      {activeSubTab === 'flashcards' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
-              <RotateCw className="w-4 h-4 text-purple-600" />
-              <span>Spaced Repetition Review</span>
-            </h2>
-            <div className="text-xs font-bold text-slate-500 dark:text-slate-400">
-              Card {cardIndex + 1} of {currentDeck?.cards.length || 0}
-            </div>
+      {/* 2. SUBJECTS TAB */}
+      {activeSubTab === 'subjects' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {subjects.map((sub) => (
+            <M3Card key={sub.id} className="p-5 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="font-extrabold text-sm">{sub.name}</span>
+                <span className="text-xs font-bold text-purple-600">{sub.progress}% Mastery</span>
+              </div>
+              <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                <div className={`h-full ${sub.color}`} style={{ width: `${sub.progress}%` }} />
+              </div>
+            </M3Card>
+          ))}
+        </div>
+      )}
+
+      {/* 3. POMODORO TIMER TAB */}
+      {activeSubTab === 'pomodoro' && (
+        <M3Card className="p-8 text-center space-y-6 max-w-md mx-auto">
+          <Clock className="w-10 h-10 text-purple-600 mx-auto" />
+          <div className="text-5xl font-mono font-black tracking-wider">
+            {formatTime(pomodoroTime)}
           </div>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => setIsPomodoroRunning(!isPomodoroRunning)}
+              className="px-6 py-3 rounded-2xl bg-purple-600 text-white font-extrabold text-xs shadow-md"
+            >
+              {isPomodoroRunning ? 'Pause Session' : 'Start Focus Session'}
+            </button>
+            <button
+              onClick={() => {
+                setIsPomodoroRunning(false);
+                setPomodoroTime(25 * 60);
+              }}
+              className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          </div>
+        </M3Card>
+      )}
 
+      {/* 4. FLASHCARDS TAB */}
+      {activeSubTab === 'flashcards' && (
+        <div className="text-center p-8 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4">
+          <h3 className="font-extrabold text-base">Spaced Repetition Review</h3>
           {currentCard ? (
-            <div className="flex flex-col items-center justify-center space-y-6">
-              {/* Interactive Flip Card */}
-              <div
-                onClick={() => setIsFlipped(!isFlipped)}
-                className={`w-full max-w-xl min-h-[260px] p-8 rounded-3xl bg-white dark:bg-slate-800 border-2 cursor-pointer transition-all flex flex-col items-center justify-center text-center shadow-lg hover:border-purple-500 ${
-                  isFlipped ? 'border-purple-500 bg-purple-50/20' : 'border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                <div className="text-xs font-bold text-purple-600 dark:text-purple-400 tracking-wider uppercase mb-4">
-                  {isFlipped ? 'Answer (Click to Flip)' : 'Question (Click to Flip)'}
-                </div>
-
-                <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">
-                  {isFlipped ? currentCard.back : currentCard.front}
-                </div>
-              </div>
-
-              {/* SRS Rating Buttons */}
-              <div className="flex items-center gap-3 w-full max-w-xl">
-                <button
-                  onClick={() => handleCardRating(1)}
-                  className="flex-1 py-3 rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-xs hover:bg-red-500/20 transition-all border border-red-500/20"
-                >
-                  Again (1d)
-                </button>
-                <button
-                  onClick={() => handleCardRating(2)}
-                  className="flex-1 py-3 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold text-xs hover:bg-amber-500/20 transition-all border border-amber-500/20"
-                >
-                  Hard (2d)
-                </button>
-                <button
-                  onClick={() => handleCardRating(3)}
-                  className="flex-1 py-3 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-xs hover:bg-blue-500/20 transition-all border border-blue-500/20"
-                >
-                  Good (4d)
-                </button>
-                <button
-                  onClick={() => handleCardRating(4)}
-                  className="flex-1 py-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-xs hover:bg-emerald-500/20 transition-all border border-emerald-500/20"
-                >
-                  Easy (7d)
-                </button>
-              </div>
+            <div
+              onClick={() => setIsFlipped(!isFlipped)}
+              className="p-8 rounded-3xl bg-purple-50 dark:bg-purple-950/30 border border-purple-500/30 cursor-pointer font-bold text-sm min-h-[160px] flex items-center justify-center"
+            >
+              {isFlipped ? currentCard.back : currentCard.front}
             </div>
           ) : (
-            <div className="text-center py-12 text-slate-500">No flashcards available in this deck.</div>
+            <p className="text-xs text-slate-400">All flashcard decks reviewed!</p>
           )}
         </div>
       )}
 
-      {/* 3. AI TUTOR TAB */}
-      {activeSubTab === 'ai_tutor' && (
-        <div className="space-y-6">
-          <div className="p-6 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-            <h2 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
-              <BrainCircuit className="w-5 h-5 text-purple-600" />
-              <span>AI Instant Concept Explainer</span>
-            </h2>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="text"
-                value={tutorTopic}
-                onChange={(e) => setTutorTopic(e.target.value)}
-                placeholder="Enter any topic or formula (e.g. Newton's 3rd Law)"
-                className="flex-1 p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none"
-              />
-              <button
-                onClick={handleGenerateAIExplanation}
-                className="px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Explain Concept</span>
-              </button>
-            </div>
-
-            {tutorExplanation && (
-              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 font-mono text-xs sm:text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed border border-slate-200 dark:border-slate-700">
-                {tutorExplanation}
-              </div>
-            )}
-          </div>
-        </div>
+      {/* 5. ANALYTICS TAB */}
+      {activeSubTab === 'analytics' && (
+        <M3Card className="p-6 space-y-4">
+          <h3 className="font-extrabold text-base">Goal Prediction & Weekly Progress</h3>
+          <p className="text-xs text-slate-500">
+            Based on current velocity, estimated exam readiness: 94% by end of week.
+          </p>
+        </M3Card>
       )}
     </div>
   );

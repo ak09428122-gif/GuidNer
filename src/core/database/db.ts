@@ -189,8 +189,8 @@ class DatabaseEngine {
     // Seed Profile
     const defaultUser: UserProfile = {
       id: 'main_user',
-      name: 'Arun Gupta',
-      email: 'arun@example.com',
+      name: 'GuideNer User',
+      email: '',
       persona_mode: 'friendly',
       life_score: 850,
       desktop_layout_compact: false,
@@ -586,14 +586,14 @@ class DatabaseEngine {
         category: 'password',
         encrypted_payload: JSON.stringify({ password: '• • • • • • • •', notes: 'Registration No: OLY-2026-8842' }),
         iv: 'mock_iv_1',
-        username_or_key: 'arun.olympiad2026',
+        username_or_key: 'student.olympiad2026',
         updated_at: now,
       },
       {
         id: 'v-2',
-        title: 'Aadhaar & Identity Verification Card',
+        title: 'Identity Verification Card',
         category: 'identity',
-        encrypted_payload: JSON.stringify({ document_number: 'XXXX-XXXX-9842', holder: 'Arun Gupta' }),
+        encrypted_payload: JSON.stringify({ document_number: 'XXXX-XXXX-9842', holder: 'Primary Account' }),
         iv: 'mock_iv_2',
         username_or_key: 'Aadhaar Card',
         updated_at: now,

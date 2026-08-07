@@ -1,6 +1,10 @@
 {
   "name": "GuideNer",
   "description": "AI-Powered Life Operating System with AI Assistant, Workspaces, Daily Timeline, Study Ecosystem, Health & Spiritual Tracking, and Security Vault.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

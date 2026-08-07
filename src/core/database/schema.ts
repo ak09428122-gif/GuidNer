@@ -164,9 +164,11 @@ export interface SmartNotification {
   message?: string;
   trigger_time?: string; // ISO string
   timestamp?: string;
+  created_at?: string;
   category?: NotificationCategory;
   is_active?: boolean;
   read?: boolean;
+  is_read?: boolean;
   sound_tone?: string;
   repeat_pattern?: string;
 }

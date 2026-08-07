@@ -39,9 +39,9 @@ async function startServer() {
       const baseInstruction = systemInstruction ||
         `${personaPrompts[persona] || personaPrompts.friendly} You assist the user with life planning, study concepts, daily routines, wellness, and goals. Always give practical, structured, and helpful advice.`;
 
-      // Use gemini-3.6-flash for general fast interaction
+      // Use gemini-2.5-flash for general fast interaction
       const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-2.5-flash',
         contents: [
           ...history.map((h: { role: string; text: string }) => ({
             role: h.role === 'user' ? 'user' : 'model',
@@ -86,7 +86,7 @@ Return strictly a JSON object with keys "title", "whatItDoes", "whyUseful", "wha
 Base context: ${JSON.stringify(baseExplanation || {})}`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',

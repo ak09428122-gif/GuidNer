@@ -22,6 +22,8 @@ import {
   Watch,
   Award,
   TrendingUp,
+  Camera,
+  Clock,
 } from 'lucide-react';
 import { UserProfile, TimeBlock, Habit, Goal, HealthLog } from '../../core/database/schema';
 import { aiEngine } from '../../core/ai/AIEngineService';
@@ -62,6 +64,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const { currentProfile } = useProfile();
   const { checkAndTriggerScreenGuide, explainFeature } = useGuidedMode();
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
+  const [activeFeedTab, setActiveFeedTab] = useState<'all' | 'today_plan' | 'habits' | 'hydration' | 'smartwatch' | 'quick_tools'>('all');
 
   // Customizable Widgets & Density State
   const [visibleWidgets, setVisibleWidgets] = useState<string[]>(() => {
@@ -102,7 +105,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   );
 
   return (
-    <div className={`w-full space-y-6 pb-20 lg:pb-8 ${density === 'compact' ? 'scale-95 origin-top' : ''}`}>
+    <div className={`w-full space-y-6 ${density === 'compact' ? 'text-sm' : ''}`}>
       {/* Top Hero Greeting Header Card (Inspired by uploaded Reference Image) */}
       <section
         id="daily_briefing_card"
@@ -110,32 +113,32 @@ export const HomeView: React.FC<HomeViewProps> = ({
           e.preventDefault();
           explainFeature('home', 'daily_briefing');
         }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-indigo-700 to-purple-800 p-6 sm:p-8 text-white shadow-xl shadow-blue-500/10 cursor-pointer"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-indigo-700 to-purple-800 p-4 sm:p-6 lg:p-8 text-white shadow-xl shadow-blue-500/10 cursor-pointer"
         title="Right-click for AI Guided Explanation"
       >
         <div className="absolute -right-10 -bottom-10 w-60 h-60 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         
         {/* Top Badges Row */}
-        <div className="flex flex-wrap items-center justify-between gap-3 relative z-10 pb-4 border-b border-white/15">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold text-white flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-blue-200" />
+        <div className="flex flex-wrap items-center justify-between gap-2.5 relative z-10 pb-3 sm:pb-4 border-b border-white/15">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-[11px] sm:text-xs font-bold text-white flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-blue-200 shrink-0" />
               <span>Today {todayDateStr}</span>
             </span>
-            <span className="px-3 py-1 rounded-full bg-emerald-400/20 text-emerald-200 backdrop-blur-md text-xs font-bold flex items-center gap-1.5 border border-emerald-400/30">
-              <Award className="w-3.5 h-3.5" />
-              <span>Daily Goal {completedTBCount} / {timeBlocks.length || 8}</span>
+            <span className="px-2.5 py-1 rounded-full bg-emerald-400/20 text-emerald-200 backdrop-blur-md text-[11px] sm:text-xs font-bold flex items-center gap-1.5 border border-emerald-400/30">
+              <Award className="w-3.5 h-3.5 shrink-0" />
+              <span>Goal {completedTBCount}/{timeBlocks.length || 8}</span>
             </span>
-            <span className="px-3 py-1 rounded-full bg-amber-400/20 text-amber-200 backdrop-blur-md text-xs font-bold flex items-center gap-1.5 border border-amber-400/30">
-              <Sparkles className="w-3.5 h-3.5" />
+            <span className="px-2.5 py-1 rounded-full bg-amber-400/20 text-amber-200 backdrop-blur-md text-[11px] sm:text-xs font-bold flex items-center gap-1.5 border border-amber-400/30">
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
               <span>{AI_PERSONA_CONFIGS[user.persona_mode].label} AI</span>
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setIsCustomizeOpen(true)}
-              className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-md text-white font-bold text-xs transition-all flex items-center gap-1.5"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-md text-white font-bold text-[11px] sm:text-xs transition-all flex items-center gap-1.5"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>Customize ⚙️</span>
@@ -144,9 +147,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pt-5 relative z-10">
-          <div className="space-y-3 max-w-2xl">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 pt-4 sm:pt-5 relative z-10">
+          <div className="space-y-2.5 max-w-2xl min-w-0 w-full">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-tight break-words">
               Good Morning, {currentProfile.name.split(' ')[0]}! 👋
             </h1>
             <p className="text-sm sm:text-base text-blue-100 font-medium leading-relaxed">
@@ -316,6 +319,58 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div>
               <div className="font-bold text-xs text-slate-900 dark:text-white">Analytics</div>
               <div className="text-[10px] text-slate-500 dark:text-slate-400">Insights & System</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => onNavigate('camera')}
+            className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-rose-500 shadow-xs hover:shadow-md transition-all group"
+          >
+            <div className="p-2.5 rounded-xl bg-rose-600/10 text-rose-600 dark:text-rose-400 group-hover:scale-105 transition-transform">
+              <Camera className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-xs text-slate-900 dark:text-white">Pro Camera</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400">Manual 4K LOG</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => onNavigate('time_suite')}
+            className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-indigo-500 shadow-xs hover:shadow-md transition-all group"
+          >
+            <div className="p-2.5 rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-xs text-slate-900 dark:text-white">Time Suite</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400">Pomodoro & Alarms</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => onNavigate('calendar_suite')}
+            className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-500 shadow-xs hover:shadow-md transition-all group"
+          >
+            <div className="p-2.5 rounded-xl bg-amber-600/10 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-xs text-slate-900 dark:text-white">Triple Calendar</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400">Gregorian / VS / BS</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => onNavigate('numerology')}
+            className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-purple-500 shadow-xs hover:shadow-md transition-all group"
+          >
+            <div className="p-2.5 rounded-xl bg-purple-600/10 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-xs text-slate-900 dark:text-white">Numerology</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400">Offline Life Path</div>
             </div>
           </button>
         </div>

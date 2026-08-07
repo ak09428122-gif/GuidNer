@@ -115,7 +115,7 @@ export const GuideNerLogo: React.FC<LogoProps> = ({
           </span>
         </div>
         {showTagline && (
-          <div className="flex items-center gap-1.5 mt-1">
+          <div className="hidden sm:flex items-center gap-1.5 mt-1">
             <span className={`h-[1.5px] ${dimensions.lineW} bg-blue-500/60 hidden sm:inline-block rounded-full`} />
             <span className={`font-extrabold tracking-widest text-slate-500 dark:text-slate-400 uppercase ${dimensions.tagline}`}>
               YOUR AI LIFE GUIDE

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Calendar, BookOpen, Lock, X, CheckSquare, Target, FileText, Download, FileCheck2, Mic, MicOff, Terminal, Zap, ArrowRight, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, BookOpen, Shield, Globe, Bot, FileText, X, ArrowRight, Settings, Sparkles, Download, CheckSquare } from 'lucide-react';
 import {
   TimeBlock,
   Habit,
@@ -14,392 +14,294 @@ import {
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  timeBlocks: TimeBlock[];
+  onNavigateToTab?: (tabId: string) => void;
+  onSelectTab?: (tabId: any) => void;
+  timeBlocks?: TimeBlock[];
   habits?: Habit[];
   goals?: Goal[];
-  documents: StudyDocument[];
+  documents?: StudyDocument[];
   utilityNotes?: UtilityNote[];
   downloadTasks?: DownloadTask[];
-  vaultItems: VaultItem[];
+  vaultItems?: VaultItem[];
   registrationForms?: RegistrationForm[];
-  onSelectTab: (tab: any) => void;
+}
+
+export interface SearchResultItem {
+  id: string;
+  type: 'note' | 'vault' | 'bookmark' | 'history' | 'ai' | 'setting' | 'task' | 'download';
+  title: string;
+  subtitle: string;
+  targetTab: string;
 }
 
 export const SearchModal: React.FC<SearchModalProps> = ({
   isOpen,
   onClose,
-  timeBlocks,
+  onNavigateToTab,
+  onSelectTab,
+  timeBlocks = [],
   habits = [],
   goals = [],
-  documents,
+  documents = [],
   utilityNotes = [],
   downloadTasks = [],
-  vaultItems,
+  vaultItems = [],
   registrationForms = [],
-  onSelectTab,
 }) => {
   const [query, setQuery] = useState('');
-  const [isListening, setIsListening] = useState(false);
+  const [results, setResults] = useState<SearchResultItem[]>([]);
+  const [filter, setFilter] = useState<'all' | 'notes' | 'browser' | 'vault' | 'settings'>('all');
 
-  if (!isOpen) return null;
-
-  const toggleVoiceInput = () => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-
-      if (!isListening) {
-        setIsListening(true);
-        recognition.start();
-
-        recognition.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          setQuery(transcript);
-          setIsListening(false);
-        };
-
-        recognition.onerror = () => {
-          setIsListening(false);
-        };
-
-        recognition.onend = () => {
-          setIsListening(false);
-        };
-      } else {
-        setIsListening(false);
-      }
-    } else {
-      // Speech recognition fallback simulation
-      setIsListening(true);
-      setTimeout(() => {
-        const voicePrompts = ['/p2p transfer', '/water 250ml', 'Quantum physics notes', '/browser google.com', '/ai summarize tasks'];
-        const randomPrompt = voicePrompts[Math.floor(Math.random() * voicePrompts.length)];
-        setQuery(randomPrompt);
-        setIsListening(false);
-      }, 1000);
-    }
-  };
-
-  const handleCommandRun = (cmd: string) => {
-    if (cmd.startsWith('/p2p') || cmd.startsWith('/omniair')) {
-      onSelectTab('omniair');
-    } else if (cmd.startsWith('/browser')) {
-      onSelectTab('browser');
-    } else if (cmd.startsWith('/ai')) {
-      onSelectTab('ai');
-    } else if (cmd.startsWith('/study') || cmd.startsWith('/doc')) {
-      onSelectTab('study');
-    } else if (cmd.startsWith('/life') || cmd.startsWith('/habit')) {
-      onSelectTab('life_os');
-    } else if (cmd.startsWith('/vault')) {
-      onSelectTab('vault');
-    } else if (cmd.startsWith('/download')) {
-      onSelectTab('downloader');
-    } else if (cmd.startsWith('/util')) {
-      onSelectTab('utilities');
-    } else {
-      onSelectTab('home');
-    }
+  const navigate = (tabId: string) => {
+    if (onSelectTab) onSelectTab(tabId);
+    else if (onNavigateToTab) onNavigateToTab(tabId);
     onClose();
   };
 
-  const q = query.toLowerCase().trim();
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
 
-  const matchedBlocks = q ? timeBlocks.filter((tb) => tb.title.toLowerCase().includes(q)) : [];
-  const matchedHabits = q ? habits.filter((h) => h.title.toLowerCase().includes(q)) : [];
-  const matchedGoals = q ? goals.filter((g) => g.title.toLowerCase().includes(q)) : [];
-  const matchedDocs = q ? documents.filter((d) => d.title.toLowerCase().includes(q) || d.content.toLowerCase().includes(q)) : [];
-  const matchedNotes = q ? utilityNotes.filter((n) => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)) : [];
-  const matchedDownloads = q ? downloadTasks.filter((d) => (d.file_name || d.source_url).toLowerCase().includes(q)) : [];
-  const matchedVault = q ? vaultItems.filter((v) => v.title.toLowerCase().includes(q)) : [];
-  const matchedReg = q ? registrationForms.filter((r) => r.student_name.toLowerCase().includes(q) || r.school_name.toLowerCase().includes(q)) : [];
+    const q = query.toLowerCase();
+    const items: SearchResultItem[] = [];
 
-  const totalResults =
-    matchedBlocks.length +
-    matchedHabits.length +
-    matchedGoals.length +
-    matchedDocs.length +
-    matchedNotes.length +
-    matchedDownloads.length +
-    matchedVault.length +
-    matchedReg.length;
+    // Search Study Documents & Notes
+    documents.forEach((d) => {
+      if (d.title.toLowerCase().includes(q) || d.content.toLowerCase().includes(q)) {
+        items.push({
+          id: d.id,
+          type: 'note',
+          title: d.title,
+          subtitle: `Study Hub • #${d.tags.join(', ')}`,
+          targetTab: 'study',
+        });
+      }
+    });
+
+    // Search Utility Notes
+    utilityNotes.forEach((n) => {
+      if (n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)) {
+        items.push({
+          id: n.id,
+          type: 'note',
+          title: n.title,
+          subtitle: `Notes & Utilities`,
+          targetTab: 'utilities',
+        });
+      }
+    });
+
+    // Search TimeBlocks & Routine Tasks
+    timeBlocks.forEach((tb) => {
+      if (tb.title.toLowerCase().includes(q)) {
+        items.push({
+          id: tb.id,
+          type: 'task',
+          title: tb.title,
+          subtitle: `Life OS Routine (${tb.start_time} - ${tb.end_time})`,
+          targetTab: 'life_os',
+        });
+      }
+    });
+
+    // Search Vault Items
+    vaultItems.forEach((v) => {
+      if (v.title.toLowerCase().includes(q)) {
+        items.push({
+          id: v.id,
+          type: 'vault',
+          title: v.title,
+          subtitle: `Secure Vault • ${v.category}`,
+          targetTab: 'vault',
+        });
+      }
+    });
+
+    // Search Downloads
+    downloadTasks.forEach((dl) => {
+      if (dl.file_name.toLowerCase().includes(q)) {
+        items.push({
+          id: dl.id,
+          type: 'download',
+          title: dl.file_name,
+          subtitle: `Download Manager (${dl.status})`,
+          targetTab: 'downloader',
+        });
+      }
+    });
+
+    // Default system matches if search is broad
+    if ('settings analytics admin options'.includes(q)) {
+      items.push({
+        id: 'sys-admin',
+        type: 'setting',
+        title: 'System Preferences & Settings',
+        subtitle: 'Security, Themes, Performance, Backup',
+        targetTab: 'admin',
+      });
+    }
+
+    if ('ai gemini assistant chat'.includes(q)) {
+      items.push({
+        id: 'sys-ai',
+        type: 'ai',
+        title: 'Gemini AI Assistant',
+        subtitle: 'Proactive Intelligence & Context Memory',
+        targetTab: 'ai',
+      });
+    }
+
+    if ('browser wikipedia google web internet'.includes(q)) {
+      items.push({
+        id: 'sys-browser',
+        type: 'bookmark',
+        title: 'OmniBrowser Multi-Tab Engine',
+        subtitle: 'Private Browsing, Reader Mode, PDF Viewer',
+        targetTab: 'browser',
+      });
+    }
+
+    setResults(items);
+  }, [query, documents, utilityNotes, timeBlocks, vaultItems, downloadTasks]);
+
+  if (!isOpen) return null;
+
+  const getIcon = (type: SearchResultItem['type']) => {
+    switch (type) {
+      case 'note':
+        return <BookOpen className="w-4 h-4 text-purple-500" />;
+      case 'vault':
+        return <Shield className="w-4 h-4 text-emerald-500" />;
+      case 'bookmark':
+      case 'history':
+        return <Globe className="w-4 h-4 text-blue-500" />;
+      case 'ai':
+        return <Bot className="w-4 h-4 text-indigo-500" />;
+      case 'setting':
+        return <Settings className="w-4 h-4 text-amber-500" />;
+      case 'download':
+        return <Download className="w-4 h-4 text-cyan-500" />;
+      case 'task':
+        return <CheckSquare className="w-4 h-4 text-teal-500" />;
+      default:
+        return <FileText className="w-4 h-4 text-slate-400" />;
+    }
+  };
+
+  const filteredResults = results.filter((res) => {
+    if (filter === 'all') return true;
+    if (filter === 'notes') return res.type === 'note' || res.type === 'task';
+    if (filter === 'browser') return res.type === 'bookmark' || res.type === 'history';
+    if (filter === 'vault') return res.type === 'vault';
+    if (filter === 'settings') return res.type === 'setting';
+    return true;
+  });
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-16 sm:pt-20 p-4 animate-in fade-in">
-      <div className="w-full max-w-xl rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col">
-        {/* Search & Command Bar */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-3">
-          <Search className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-start justify-center pt-20 p-4 animate-in fade-in">
+      <div className="w-full max-w-2xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-4 sm:p-6 space-y-4">
+        {/* Search input field */}
+        <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          <Search className="w-5 h-5 text-slate-400 shrink-0" />
           <input
             type="text"
-            autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search tasks, docs, vault, files or type /p2p, /browser, /ai..."
-            className="flex-1 bg-transparent text-sm text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400 font-medium"
+            placeholder="Search notes, vault items, bookmarks, settings, AI memories..."
+            className="flex-1 bg-transparent text-sm font-semibold text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400"
+            autoFocus
           />
-
-          {/* Voice Search Button */}
-          <button
-            onClick={toggleVoiceInput}
-            className={`p-2 rounded-xl transition-all ${
-              isListening
-                ? 'bg-red-500 text-white animate-pulse shadow-md shadow-red-500/30'
-                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-emerald-500'
-            }`}
-            title="Voice Input Command"
-          >
-            {isListening ? <Mic className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-          </button>
-
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white">
+          <button onClick={onClose} className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Command Shortcuts Bar */}
-        <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2 overflow-x-auto text-[11px] no-scrollbar">
-          <span className="font-bold text-slate-400 shrink-0 flex items-center gap-1">
-            <Terminal className="w-3.5 h-3.5" /> Shortcuts:
-          </span>
+        {/* Filter categories */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {[
-            { label: '/p2p', tab: 'omniair', desc: 'OmniAir Beam' },
-            { label: '/browser', tab: 'browser', desc: 'Multi-Tab Browser' },
-            { label: '/study', tab: 'study', desc: 'Study Notes & AI' },
-            { label: '/vault', tab: 'vault', desc: 'Encrypted Secrets' },
-            { label: '/download', tab: 'downloader', desc: 'File Manager' },
-            { label: '/life', tab: 'life_os', desc: 'Life OS & Habits' },
-          ].map((sc) => (
+            { id: 'all', label: 'All Results' },
+            { id: 'notes', label: 'Study Notes & Tasks' },
+            { id: 'browser', label: 'Bookmarks & Web' },
+            { id: 'vault', label: 'Vault Items' },
+            { id: 'settings', label: 'System Settings' },
+          ].map((cat) => (
             <button
-              key={sc.label}
-              onClick={() => handleCommandRun(sc.label)}
-              className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 transition-all shrink-0 flex items-center gap-1"
+              key={cat.id}
+              onClick={() => setFilter(cat.id as any)}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                filter === cat.id
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+              }`}
             >
-              <span>{sc.label}</span>
-              <span className="text-[9px] text-slate-400">({sc.desc})</span>
+              {cat.label}
             </button>
           ))}
         </div>
 
-        {/* Search Results Stream */}
-        <div className="max-h-96 overflow-y-auto p-4 space-y-4 text-xs">
-          {q === '' ? (
-            <div className="text-center py-8 text-slate-400 font-medium space-y-2">
-              <Sparkles className="w-6 h-6 mx-auto text-emerald-500 animate-pulse" />
-              <p>Type keywords or use voice input to search across GuideNer OS...</p>
+        {/* Results list */}
+        <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+          {query && filteredResults.length === 0 ? (
+            <div className="text-center py-8 text-xs text-slate-400 space-y-1">
+              <p>No matching items found for "{query}".</p>
+              <p className="text-[10px] text-slate-500">Try searching for "Physics", "Vault", or "Settings".</p>
             </div>
-          ) : totalResults === 0 ? (
-            <div className="text-center py-8 text-slate-400 font-medium">
-              No matching records found for "{query}".
+          ) : !query ? (
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 text-xs text-slate-500 dark:text-slate-400 space-y-2">
+              <span className="font-extrabold uppercase tracking-wider text-[10px] text-slate-400 block">
+                Quick Shortcuts
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => navigate('browser')}
+                  className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-left font-bold text-slate-800 dark:text-slate-200 hover:border-indigo-500"
+                >
+                  🌐 Launch OmniBrowser
+                </button>
+                <button
+                  onClick={() => navigate('ai')}
+                  className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-left font-bold text-slate-800 dark:text-slate-200 hover:border-indigo-500"
+                >
+                  🤖 Ask Gemini AI
+                </button>
+                <button
+                  onClick={() => navigate('vault')}
+                  className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-left font-bold text-slate-800 dark:text-slate-200 hover:border-indigo-500"
+                >
+                  🔒 Open Secure Vault
+                </button>
+                <button
+                  onClick={() => navigate('admin')}
+                  className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-left font-bold text-slate-800 dark:text-slate-200 hover:border-indigo-500"
+                >
+                  ⚙️ System Preferences
+                </button>
+              </div>
             </div>
           ) : (
-            <>
-              {/* Time Blocks */}
-              {matchedBlocks.length > 0 && (
-                <div className="space-y-2">
-                  <div className="font-bold text-slate-400 uppercase text-[10px] tracking-wider">
-                    Time Blocks ({matchedBlocks.length})
+            filteredResults.map((res) => (
+              <button
+                key={res.id}
+                onClick={() => navigate(res.targetTab)}
+                className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 flex items-center justify-between transition-all group text-left"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-xl bg-white dark:bg-slate-700 shadow-xs shrink-0">
+                    {getIcon(res.type)}
                   </div>
-                  {matchedBlocks.map((tb) => (
-                    <div
-                      key={tb.id}
-                      onClick={() => {
-                        onSelectTab('life_os');
-                        onClose();
-                      }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors border border-slate-200/50 dark:border-slate-800"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-blue-600" />
-                        <span className="font-bold text-slate-800 dark:text-slate-100">{tb.title}</span>
-                      </div>
-                      <span className="text-[10px] text-slate-400">{tb.start_time}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Habits */}
-              {matchedHabits.length > 0 && (
-                <div className="space-y-2">
-                  <div className="font-bold text-slate-400 uppercase text-[10px] tracking-wider">
-                    Habits ({matchedHabits.length})
+                  <div className="truncate">
+                    <div className="font-bold text-xs text-slate-900 dark:text-white truncate">{res.title}</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">{res.subtitle}</div>
                   </div>
-                  {matchedHabits.map((h) => (
-                    <div
-                      key={h.id}
-                      onClick={() => {
-                        onSelectTab('life_os');
-                        onClose();
-                      }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors border border-slate-200/50 dark:border-slate-800"
-                    >
-                      <div className="flex items-center gap-2">
-                        <CheckSquare className="w-4 h-4 text-emerald-600" />
-                        <span className="font-bold text-slate-800 dark:text-slate-100">{h.title}</span>
-                      </div>
-                      <span className="text-[10px] text-emerald-600 font-bold">Streak: {h.streak}d</span>
-                    </div>
-                  ))}
                 </div>
-              )}
-
-              {/* Goals */}
-              {matchedGoals.length > 0 && (
-                <div className="space-y-2">
-                  <div className="font-bold text-slate-400 uppercase text-[10px] tracking-wider">
-                    Goals ({matchedGoals.length})
-                  </div>
-                  {matchedGoals.map((g) => (
-                    <div
-                      key={g.id}
-                      onClick={() => {
-                        onSelectTab('life_os');
-                        onClose();
-                      }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors border border-slate-200/50 dark:border-slate-800"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Target className="w-4 h-4 text-indigo-600" />
-                        <span className="font-bold text-slate-800 dark:text-slate-100">{g.title}</span>
-                      </div>
-                      <span className="text-[10px] text-indigo-600 uppercase font-bold">{g.horizon}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Study Notes */}
-              {matchedDocs.length > 0 && (
-                <div className="space-y-2">
-                  <div className="font-bold text-slate-400 uppercase text-[10px] tracking-wider">
-                    Study Notes ({matchedDocs.length})
-                  </div>
-                  {matchedDocs.map((doc) => (
-                    <div
-                      key={doc.id}
-                      onClick={() => {
-                        onSelectTab('study');
-                        onClose();
-                      }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-colors border border-slate-200/50 dark:border-slate-800"
-                    >
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-purple-600" />
-                        <span className="font-bold text-slate-800 dark:text-slate-100">{doc.title}</span>
-                      </div>
-                      <span className="text-[10px] text-slate-400">#{doc.tags.join(', ')}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Utility Notes */}
-              {matchedNotes.length > 0 && (
-                <div className="space-y-2">
-                  <div className="font-bold text-slate-400 uppercase text-[10px] tracking-wider">
-                    Scratchpad Notes ({matchedNotes.length})
-                  </div>
-                  {matchedNotes.map((n) => (
-                    <div
-                      key={n.id}
-                      onClick={() => {
-                        onSelectTab('utilities');
-                        onClose();
-                      }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors border border-slate-200/50 dark:border-slate-800"
-                    >
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-amber-600" />
-                        <span className="font-bold text-slate-800 dark:text-slate-100">{n.title}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Downloads */}
-              {matchedDownloads.length > 0 && (
-                <div className="space-y-2">
-                  <div className="font-bold text-slate-400 uppercase text-[10px] tracking-wider">
-                    Transfer Downloads ({matchedDownloads.length})
-                  </div>
-                  {matchedDownloads.map((d) => (
-                    <div
-                      key={d.id}
-                      onClick={() => {
-                        onSelectTab('downloader');
-                        onClose();
-                      }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between cursor-pointer hover:bg-cyan-50 dark:hover:bg-cyan-950/30 transition-colors border border-slate-200/50 dark:border-slate-800"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Download className="w-4 h-4 text-cyan-600" />
-                        <span className="font-bold text-slate-800 dark:text-slate-100">{d.file_name || d.source_url}</span>
-                      </div>
-                      <span className="text-[10px] text-cyan-600 uppercase font-bold">{d.status}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Vault Items */}
-              {matchedVault.length > 0 && (
-                <div className="space-y-2">
-                  <div className="font-bold text-slate-400 uppercase text-[10px] tracking-wider">
-                    Encrypted Vault Secrets ({matchedVault.length})
-                  </div>
-                  {matchedVault.map((v) => (
-                    <div
-                      key={v.id}
-                      onClick={() => {
-                        onSelectTab('vault');
-                        onClose();
-                      }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors border border-slate-200/50 dark:border-slate-800"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Lock className="w-4 h-4 text-red-600" />
-                        <span className="font-bold text-slate-800 dark:text-slate-100">{v.title}</span>
-                      </div>
-                        <span className="text-[10px] text-red-600 uppercase font-bold">{v.category}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Registration Forms */}
-              {matchedReg.length > 0 && (
-                <div className="space-y-2">
-                  <div className="font-bold text-slate-400 uppercase text-[10px] tracking-wider">
-                    Olympiad Forms ({matchedReg.length})
-                  </div>
-                  {matchedReg.map((r) => (
-                    <div
-                      key={r.id}
-                      onClick={() => {
-                        onSelectTab('registration');
-                        onClose();
-                      }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 flex items-center justify-between cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors border border-slate-200/50 dark:border-slate-800"
-                    >
-                      <div className="flex items-center gap-2">
-                        <FileCheck2 className="w-4 h-4 text-blue-600" />
-                        <span className="font-bold text-slate-800 dark:text-slate-100">{r.student_name} ({r.school_name})</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 shrink-0 ml-2" />
+              </button>
+            ))
           )}
         </div>
       </div>
     </div>
   );
 };
-
-

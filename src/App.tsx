@@ -23,6 +23,7 @@ import { ThemeMode, AIPersonaMode } from './core/theme/tokens';
 import { Navigation, ActiveTab } from './shared/components/Navigation';
 import { HomeView } from './features/home/HomeView';
 import { AIView } from './features/ai_companion/AIView';
+import { CommunicationSuiteView } from './features/communication/CommunicationSuiteView';
 import { LifeOSView } from './features/life_os/LifeOSView';
 import { StudyView } from './features/study/StudyView';
 import { HealthSpiritualView } from './features/health_spiritual/HealthSpiritualView';
@@ -33,6 +34,14 @@ import { OmniAirView } from './features/omniair/OmniAirView';
 import { OmniBrowserView } from './features/browser/OmniBrowserView';
 import { KnowledgeLibraryView } from './features/knowledge_library/KnowledgeLibraryView';
 import { AdminView } from './features/admin/AdminView';
+import { ProCameraView } from './features/camera/ProCameraView';
+import { TimeSuiteView } from './features/time_suite/TimeSuiteView';
+import { CalendarSuiteView } from './features/calendar_suite/CalendarSuiteView';
+import { NumerologyView } from './features/numerology/NumerologyView';
+import { FileManagerView } from './features/file_manager/FileManagerView';
+import { SettingsView } from './features/settings/SettingsView';
+import { CloudAccountModal } from './features/cloud_account/CloudAccountModal';
+import { NotificationCenterModal } from './features/notifications/NotificationCenterModal';
 import { SearchModal } from './shared/components/SearchModal';
 import { NotificationModal } from './shared/components/NotificationModal';
 import { GuidedModeProvider } from './core/guided/GuidedModeContext';
@@ -45,12 +54,18 @@ import { GuidedModeSettingsModal } from './shared/components/GuidedModeSettingsM
 import { FloatingAIAssistant } from './shared/components/FloatingAIAssistant';
 import { DesktopContextMenu } from './shared/components/DesktopContextMenu';
 import { DesktopShortcutsHelpModal } from './shared/components/DesktopShortcutsHelpModal';
+import { SplashScreen } from './shared/components/SplashScreen';
+import { OnboardingWizard } from './features/onboarding/OnboardingWizard';
 
 export function AppContent() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
   const [theme, setTheme] = useState<ThemeMode>('light');
   const [persona, setPersona] = useState<AIPersonaMode>('friendly');
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
+
+  // Splash & Onboarding Flow
+  const [showSplash, setShowSplash] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Database Data States
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -154,6 +169,7 @@ export function AppContent() {
   const [isNotifsOpen, setIsNotifsOpen] = useState(false);
   const [isActivityCenterOpen, setIsActivityCenterOpen] = useState(false);
   const [isGuidedSettingsOpen, setIsGuidedSettingsOpen] = useState(false);
+  const [isCloudAccountOpen, setIsCloudAccountOpen] = useState(false);
 
   // Load IndexedDB Data on Mount
   useEffect(() => {
@@ -447,12 +463,37 @@ export function AppContent() {
     a.click();
   };
 
+  // Splash Finish Handler
+  const handleSplashFinish = () => {
+    setShowSplash(false);
+    const completed = localStorage.getItem('guidener_onboarding_completed') === 'true';
+    if (!completed) {
+      setShowOnboarding(true);
+    }
+  };
+
+  if (showSplash) {
+    return <SplashScreen onFinish={handleSplashFinish} />;
+  }
+
+  if (showOnboarding) {
+    return (
+      <OnboardingWizard
+        isOpen={true}
+        onComplete={(updatedUser) => {
+          setUser(updatedUser);
+          setShowOnboarding(false);
+        }}
+      />
+    );
+  }
+
   if (!user || !healthLog || !spiritualLog) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300">
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
         <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-bold">Initializing GuideNer Life OS Engine...</p>
+          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-bold text-slate-400">Loading GuideNer Workspace Engine...</p>
         </div>
       </div>
     );
@@ -461,7 +502,7 @@ export function AppContent() {
   const unreadActivitiesCount = activities.filter((a) => !a.isRead).length;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors antialiased">
+    <div className="h-screen max-h-screen w-screen max-w-full overflow-hidden flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors antialiased select-none">
       {/* Top Header & Navigation Bar */}
       <Navigation
         activeTab={activeTab}
@@ -474,151 +515,177 @@ export function AppContent() {
         onOpenSearch={() => setIsSearchOpen(true)}
         unreadNotifsCount={unreadActivitiesCount}
         onOpenNotifs={() => setIsActivityCenterOpen(true)}
-        onOpenGuidedSettings={() => setIsGuidedSettingsOpen(true)}
+        onOpenGuidedSettings={() => setActiveTab('settings')}
+        onOpenCloudAccount={() => setIsCloudAccountOpen(true)}
       />
 
-      {/* Main Workspace Layout */}
-      <main className="lg:pl-64 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8 w-full max-w-full min-h-[calc(100vh-60px)]">
-        {activeTab === 'home' && (
-          <HomeView
-            user={{ ...user, persona_mode: persona }}
-            timeBlocks={timeBlocks}
-            habits={habits}
-            goals={goals}
-            healthLog={healthLog}
-            onToggleTimeBlock={handleToggleTimeBlock}
-            onToggleHabit={handleToggleHabit}
-            onAddWater={handleAddWater}
-            onNavigate={setActiveTab}
-            unreadActivityCount={unreadActivitiesCount}
-            onOpenActivityCenter={() => setIsActivityCenterOpen(true)}
-            latestActivityTitle={activities[0]?.title}
-          />
-        )}
+      {/* Main Workspace Viewport (Native Mobile Paging & Smooth Touch Scroll) */}
+      <main className="lg:pl-64 flex-1 w-full max-w-full overflow-y-auto no-scrollbar mobile-touch-scroll transition-all">
+        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto pb-28 lg:pb-12 space-y-5">
+          {activeTab === 'file_manager' && <FileManagerView />}
+          {activeTab === 'home' && (
+            <HomeView
+              user={{ ...user, persona_mode: persona }}
+              timeBlocks={timeBlocks}
+              habits={habits}
+              goals={goals}
+              healthLog={healthLog}
+              onToggleTimeBlock={handleToggleTimeBlock}
+              onToggleHabit={handleToggleHabit}
+              onAddWater={handleAddWater}
+              onNavigate={setActiveTab}
+              unreadActivityCount={unreadActivitiesCount}
+              onOpenActivityCenter={() => setIsActivityCenterOpen(true)}
+              latestActivityTitle={activities[0]?.title}
+            />
+          )}
 
-        {activeTab === 'ai' && (
-          <AIView
-            persona={persona}
-            setPersona={setPersona}
-            aiMemories={aiMemories}
-            onAddMemory={handleAddAIMemory}
-          />
-        )}
+          {activeTab === 'ai' && (
+            <AIView
+              persona={persona}
+              setPersona={setPersona}
+              aiMemories={aiMemories}
+              onAddMemory={handleAddAIMemory}
+            />
+          )}
 
-        {activeTab === 'life_os' && (
-          <LifeOSView
-            timeBlocks={timeBlocks}
-            habits={habits}
-            goals={goals}
-            onSaveTimeBlock={handleSaveTimeBlock}
-            onDeleteTimeBlock={handleDeleteTimeBlock}
-            onToggleTimeBlock={handleToggleTimeBlock}
-            onSaveHabit={handleSaveHabit}
-            onDeleteHabit={handleDeleteHabit}
-            onToggleHabit={handleToggleHabit}
-            onSaveGoal={handleSaveGoal}
-            onDeleteGoal={handleDeleteGoal}
-          />
-        )}
+          {activeTab === 'communication' && <CommunicationSuiteView />}
 
-        {activeTab === 'study' && (
-          <StudyView
-            documents={documents}
-            flashcardDecks={flashcardDecks}
-            onSaveDocument={handleSaveDocument}
-            onSaveDeck={(deck) => {
-              const updated = [deck, ...flashcardDecks];
-              setFlashcardDecks(updated);
-              db.saveFlashcardDecks(updated);
-            }}
-          />
-        )}
+          {activeTab === 'life_os' && (
+            <LifeOSView
+              timeBlocks={timeBlocks}
+              habits={habits}
+              goals={goals}
+              onSaveTimeBlock={handleSaveTimeBlock}
+              onDeleteTimeBlock={handleDeleteTimeBlock}
+              onToggleTimeBlock={handleToggleTimeBlock}
+              onSaveHabit={handleSaveHabit}
+              onDeleteHabit={handleDeleteHabit}
+              onToggleHabit={handleToggleHabit}
+              onSaveGoal={handleSaveGoal}
+              onDeleteGoal={handleDeleteGoal}
+            />
+          )}
 
-        {activeTab === 'health_spiritual' && (
-          <HealthSpiritualView
-            healthLog={healthLog}
-            spiritualLog={spiritualLog}
-            onSaveHealthLog={(hl) => {
-              setHealthLog(hl);
-              db.saveHealthLog(hl);
-            }}
-            onSaveSpiritualLog={(sl) => {
-              setSpiritualLog(sl);
-              db.saveSpiritualLog(sl);
-            }}
-          />
-        )}
+          {activeTab === 'study' && (
+            <StudyView
+              documents={documents}
+              flashcardDecks={flashcardDecks}
+              onSaveDocument={handleSaveDocument}
+              onSaveDeck={(deck) => {
+                const updated = [deck, ...flashcardDecks];
+                setFlashcardDecks(updated);
+                db.saveFlashcardDecks(updated);
+              }}
+            />
+          )}
 
-        {activeTab === 'utilities' && (
-          <UtilitiesView
-            utilityNotes={utilityNotes}
-            clipboardHistory={clipboardHistory}
-            onSaveNote={handleSaveUtilityNote}
-            onDeleteNote={handleDeleteUtilityNote}
-            onClearClipboard={handleClearClipboard}
-          />
-        )}
+          {activeTab === 'health_spiritual' && (
+            <HealthSpiritualView
+              healthLog={healthLog}
+              spiritualLog={spiritualLog}
+              onSaveHealthLog={(hl) => {
+                setHealthLog(hl);
+                db.saveHealthLog(hl);
+              }}
+              onSaveSpiritualLog={(sl) => {
+                setSpiritualLog(sl);
+                db.saveSpiritualLog(sl);
+              }}
+            />
+          )}
 
-        {activeTab === 'downloader' && (
-          <DownloaderView
-            downloadTasks={downloadTasks}
-            onSaveTask={handleSaveDownloadTask}
-            onDeleteTask={handleDeleteDownloadTask}
-          />
-        )}
+          {activeTab === 'utilities' && (
+            <UtilitiesView
+              utilityNotes={utilityNotes}
+              clipboardHistory={clipboardHistory}
+              onSaveNote={handleSaveUtilityNote}
+              onDeleteNote={handleDeleteUtilityNote}
+              onClearClipboard={handleClearClipboard}
+            />
+          )}
 
-        {activeTab === 'vault' && (
-          <VaultView
-            vaultItems={vaultItems}
-            onSaveVaultItem={handleSaveVaultItem}
-            onDeleteVaultItem={handleDeleteVaultItem}
-          />
-        )}
+          {activeTab === 'downloader' && (
+            <DownloaderView
+              downloadTasks={downloadTasks}
+              onSaveTask={handleSaveDownloadTask}
+              onDeleteTask={handleDeleteDownloadTask}
+            />
+          )}
 
-        {activeTab === 'omniair' && (
-          <OmniAirView
-            onSaveVaultItem={handleSaveVaultItem}
-            onAddDownloadTask={handleSaveDownloadTask}
-          />
-        )}
+          {activeTab === 'vault' && (
+            <VaultView
+              vaultItems={vaultItems}
+              onSaveVaultItem={handleSaveVaultItem}
+              onDeleteVaultItem={handleDeleteVaultItem}
+            />
+          )}
 
-        {activeTab === 'browser' && (
-          <OmniBrowserView
-            onSaveToDownloads={handleSaveDownloadTask}
-            onSaveToVault={(title, url) => {
-              handleSaveVaultItem({
-                id: `vault-${Date.now()}`,
-                title,
-                category: 'document',
-                encrypted_payload: url,
-                iv: 'browser-iv',
-                updated_at: new Date().toISOString(),
-              });
-            }}
-            onShareToOmniAir={(url) => {
-              setActiveTab('omniair');
-            }}
-          />
-        )}
+          {activeTab === 'omniair' && (
+            <OmniAirView
+              onSaveVaultItem={handleSaveVaultItem}
+              onAddDownloadTask={handleSaveDownloadTask}
+            />
+          )}
 
-        {activeTab === 'registration' && (
-          <KnowledgeLibraryView
-            onNavigateAI={(prompt) => {
-              setActiveTab('ai');
-            }}
-          />
-        )}
+          {activeTab === 'browser' && (
+            <OmniBrowserView
+              onSaveToDownloads={handleSaveDownloadTask}
+              onSaveToVault={(title, url) => {
+                handleSaveVaultItem({
+                  id: `vault-${Date.now()}`,
+                  title,
+                  category: 'document',
+                  encrypted_payload: url,
+                  iv: 'browser-iv',
+                  updated_at: new Date().toISOString(),
+                });
+              }}
+              onShareToOmniAir={(url) => {
+                setActiveTab('omniair');
+              }}
+            />
+          )}
 
-        {activeTab === 'admin' && (
-          <AdminView
-            user={user}
-            timeBlocksCount={timeBlocks.length}
-            habitsCount={habits.length}
-            goalsCount={goals.length}
-            vaultItemsCount={vaultItems.length}
-            onExportBackup={handleExportBackup}
-          />
-        )}
+          {activeTab === 'registration' && (
+            <KnowledgeLibraryView
+              onNavigateAI={(prompt) => {
+                setActiveTab('ai');
+              }}
+            />
+          )}
+
+          {activeTab === 'admin' && (
+            <AdminView
+              user={user}
+              timeBlocksCount={timeBlocks.length}
+              habitsCount={habits.length}
+              goalsCount={goals.length}
+              vaultItemsCount={vaultItems.length}
+              onExportBackup={handleExportBackup}
+            />
+          )}
+
+          {activeTab === 'camera' && <ProCameraView />}
+
+          {activeTab === 'time_suite' && <TimeSuiteView />}
+
+          {activeTab === 'calendar_suite' && <CalendarSuiteView />}
+
+          {activeTab === 'numerology' && <NumerologyView />}
+
+          {activeTab === 'settings' && (
+            <SettingsView
+              theme={theme}
+              setTheme={setTheme}
+              persona={persona}
+              setPersona={setPersona}
+              user={user}
+              onExportBackup={handleExportBackup}
+              onNavigateTab={setActiveTab}
+            />
+          )}
+        </div>
       </main>
 
       {/* Global Command Palette Search Modal */}
@@ -659,6 +726,38 @@ export function AppContent() {
           setActivities((prev) =>
             prev.map((a) => (a.id === id ? { ...a, isPinned: !a.isPinned } : a))
           );
+        }}
+        onNavigateTab={(tab) => {
+          setActiveTab(tab as ActiveTab);
+        }}
+      />
+
+      {/* GuideNer Cloud Account Modal */}
+      <CloudAccountModal
+        isOpen={isCloudAccountOpen}
+        onClose={() => setIsCloudAccountOpen(false)}
+        user={user}
+        onSaveUser={(updatedUser) => {
+          setUser(updatedUser);
+          db.saveUserProfile(updatedUser);
+        }}
+      />
+
+      {/* Global Notification Center Hub */}
+      <NotificationCenterModal
+        isOpen={isNotifsOpen}
+        onClose={() => setIsNotifsOpen(false)}
+        notifications={notifications}
+        onMarkAsRead={(id) => {
+          const updated = notifications.map((n) =>
+            n.id === id ? { ...n, read: true, is_read: true } : n
+          );
+          setNotifications(updated);
+          db.saveNotifications(updated);
+        }}
+        onClearAll={() => {
+          setNotifications([]);
+          db.saveNotifications([]);
         }}
         onNavigateTab={(tab) => {
           setActiveTab(tab as ActiveTab);
